@@ -1,0 +1,40 @@
+name: "VBAN Bridge"
+version: "0.1.0"
+slug: "vban_bridge"
+description: >-
+  Streams an audio input on the Home Assistant host (for example a turntable
+  or tape deck through a USB audio interface) to Music Assistant as a VBAN
+  source.
+url: "https://github.com/Thrasher2020/vban-bridge"
+arch:
+  - amd64
+  - aarch64
+startup: application
+boot: auto
+init: false
+# Gives this add-on Home Assistant's PulseAudio input, including its own
+# Audio input selector on the Configuration tab.
+audio: true
+# The Music Assistant add-on also runs on the host network, so the stream can
+# go to 127.0.0.1 and never touch the LAN.
+host_network: true
+options:
+  ma_host: "127.0.0.1"
+  ma_port: 6980
+  stream_name: "VinylBridge"
+  sample_rate: 48000
+  channels: 2
+  format: "16I"
+  alsa_device: "pulse"
+  buffer_size: 1024
+  log_level: 3
+schema:
+  ma_host: str
+  ma_port: port
+  stream_name: match(^[A-Za-z0-9]{1,16}$)
+  sample_rate: list(44100|48000)
+  channels: list(1|2)
+  format: list(16I|24I|32I|32F)
+  alsa_device: str
+  buffer_size: int(128,8192)
+  log_level: int(0,4)

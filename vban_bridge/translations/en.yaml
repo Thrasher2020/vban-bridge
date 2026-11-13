@@ -1,0 +1,47 @@
+configuration:
+  ma_host:
+    name: Music Assistant host
+    description: >-
+      Address the VBAN stream is sent to. Both this add-on and the Music
+      Assistant add-on run on the host network, so 127.0.0.1 keeps the stream
+      on the machine and off the LAN.
+  ma_port:
+    name: Music Assistant VBAN port
+    description: >-
+      UDP port the Music Assistant VBAN Receiver plugin listens on. It must
+      match the UDP port configured on the plugin.
+  stream_name:
+    name: Stream name
+    description: >-
+      VBAN stream name, 1 to 16 letters or digits. It must match the stream
+      name configured on the Music Assistant VBAN Receiver plugin.
+  sample_rate:
+    name: Sample rate
+    description: >-
+      Capture sample rate. 48000 matches Music Assistant's default Live Input
+      format; 44100 matches CD and most vinyl rips.
+  channels:
+    name: Channels
+    description: >-
+      2 for stereo. Set 1 for a mono source.
+  format:
+    name: Sample format
+    description: >-
+      16I is CD and Music Assistant's default (S16LE). 24I and 32I need a
+      source that actually records at that depth.
+  alsa_device:
+    name: ALSA capture device
+    description: >-
+      ALSA PCM to record from. "pulse" routes to Home Assistant's PulseAudio
+      input, which is the Audio input selected on this add-on's Configuration
+      tab. Change only if you know the device name on the host.
+  buffer_size:
+    name: Buffer size
+    description: >-
+      Frames read per packet. 1024 is about 21 ms at 48 kHz. Smaller means
+      lower latency but more packets; larger is more tolerant of scheduling
+      jitter.
+  log_level:
+    name: Log level
+    description: >-
+      0 fatal, 1 error, 2 warning, 3 info, 4 debug.
