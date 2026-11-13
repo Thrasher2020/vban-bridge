@@ -5,6 +5,7 @@
 [![GitHub release](https://img.shields.io/github/v/release/Thrasher2020/vban-bridge?display_name=tag&sort=semver)](https://github.com/Thrasher2020/vban-bridge/releases)
 ![Architectures](https://img.shields.io/badge/arch-amd64%20%7C%20aarch64-informational)
 ![Home Assistant](https://img.shields.io/badge/Home%20Assistant-OS%20%7C%20Supervised-41BDF5)
+[![License: MIT](https://img.shields.io/badge/license-MIT-yellow)](LICENSE)
 
 VBAN Bridge is a small Home Assistant add-on that captures a line input on the
 host and streams it to [Music Assistant](https://www.music-assistant.io) over
@@ -224,6 +225,18 @@ job with no extra software at all.
 - [VBAN](https://vb-audio.com/Voicemeeter/vban.htm) — the protocol, by VB-Audio.
 - [Music Assistant](https://www.music-assistant.io) and its VBAN Receiver
   plugin, contributed by sprocket-9.
+
+## Licence
+
+The add-on itself — the `Dockerfile`, `run.sh`, `config.yaml`, translations and
+this README — is **MIT** licensed. See [LICENSE](LICENSE); use it, fork it,
+ship it.
+
+`vban_emitter` is not part of this repository. It is GPL-3.0 and is compiled
+from [quiniouben/vban](https://github.com/quiniouben/vban) on your own machine
+when the add-on is installed, so nothing GPL is redistributed here. If you ever
+publish a prebuilt image you would be distributing that compiled binary, and
+GPL-3.0's terms would then apply to it.
 
 ## Issues
 
