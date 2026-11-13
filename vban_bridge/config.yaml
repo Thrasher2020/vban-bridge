@@ -1,5 +1,5 @@
 name: "VBAN Bridge"
-version: "0.1.0"
+version: "0.1.1"
 slug: "vban_bridge"
 description: >-
   Streams an audio input on the Home Assistant host (for example a turntable
