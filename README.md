@@ -1,99 +1,233 @@
-# VBAN Bridge — Home Assistant add-on
+# VBAN Bridge
 
-Streams a line-level audio input on the Home Assistant host to
-[Music Assistant](https://music-assistant.io) as a **VBAN** source, so a
-turntable, tape deck or CD player connected to a USB audio interface can play
-on any Music Assistant player or speaker group.
+**Turn a turntable, tape deck or CD player plugged into your Home Assistant box into a Music Assistant source.**
 
-```
-turntable ──► phono stage ──► USB audio interface ──► PulseAudio
-                                                        │
-                                              VBAN Bridge (this add-on)
-                                                        │  VBAN/UDP 127.0.0.1:6980
-                                                        ▼
-                                          Music Assistant — VBAN Receiver
-                                                        │
-                                                        ▼
-                                              any MA player or group
-```
+[![GitHub release](https://img.shields.io/github/v/release/Thrasher2020/vban-bridge?display_name=tag&sort=semver)](https://github.com/Thrasher2020/vban-bridge/releases)
+![Architectures](https://img.shields.io/badge/arch-amd64%20%7C%20aarch64-informational)
+![Home Assistant](https://img.shields.io/badge/Home%20Assistant-OS%20%7C%20Supervised-41BDF5)
 
-## Why an add-on is needed
+VBAN Bridge is a small Home Assistant add-on that captures a line input on the
+host and streams it to [Music Assistant](https://www.music-assistant.io) over
+VBAN. In Music Assistant it behaves like an aux input: play it on any player or
+speaker group, in one room or all of them, from a record.
 
-Music Assistant 2.10.x can play a **VBAN** stream but cannot capture a USB
-line-in by itself: its Sendspin *source* plugin needs a device that advertises
-a `source@v1` capability, and its Local Audio app is output-only. Something on
-the host has to open the input and packetise it. This add-on is that something:
-it runs [`quiniouben/vban`](https://github.com/quiniouben/vban) `vban_emitter`
+## Why this exists
+
+Music Assistant 2.10 can *receive* a VBAN stream, but it cannot open a USB
+line-in by itself:
+
+- The **Local Audio** app is a Sendspin *player* — audio out, not in.
+- The **Sendspin Source** plugin needs a remote device that advertises a
+  `source@v1` capability. A USB interface plugged into the machine running
+  Music Assistant is not such a device.
+- There is no "local ALSA input" provider; the upstream pull request for one
+  was never merged.
+
+So something on the host has to open the input and packetise it. This add-on is
+that something: it runs [`vban_emitter`](https://github.com/quiniouben/vban)
 against Home Assistant's PulseAudio input.
+
+## How it works
+
+```
+turntable / tape / CD
+        │  line level (vinyl needs a phono stage first)
+        ▼
+USB audio interface ──► PulseAudio ──► vban_emitter ──► VBAN/UDP
+                                        (this add-on)   127.0.0.1:6980
+                                                            │
+                                                            ▼
+                                     Music Assistant — VBAN Receiver plugin
+                                                            │
+                                                            ▼
+                                                any player or speaker group
+```
+
+Details worth knowing:
+
+- **No transcoding.** PCM goes from the interface to the UDP socket untouched,
+  so CPU use is negligible and nothing is added to the signal path.
+- **`audio: true`** gives the add-on Home Assistant's PulseAudio input and its
+  own **Audio input** selector on the Configuration tab. `vban_emitter` records
+  from the ALSA `pulse` PCM.
+- **`host_network: true`** means this add-on and the Music Assistant add-on
+  share the host's loopback, so the default target `127.0.0.1:6980` never
+  touches your network. Nothing to open in a firewall.
+- The image builds `vban_emitter` from source when installed, pinned to v2.2.0
+  (`9c3d558`), ALSA backend only.
+
+## Requirements
+
+- Home Assistant OS or Supervised, with add-ons available. This is an add-on,
+  not an integration.
+- Music Assistant add-on **2.10 or newer**, for its VBAN Receiver plugin.
+- A **line-level** audio source. Vinyl needs a phono stage before the
+  interface — either built into the turntable (e.g. AT-LP3BK) or a separate
+  preamp. A UCA222/UCA202/UFO202 is line-in only and has no phono input.
+- A USB audio interface ALSA can see. Class-compliant interfaces work; the
+  PCM2902-based UCA series is what this was developed against.
+- Architectures: `amd64`, `aarch64`.
 
 ## Installation
 
-1. Settings → Apps (the old Add-ons panel) → **App store** → ⋮ →
-   **Repositories**, add `https://github.com/Thrasher2020/vban-bridge`, then
-   install **VBAN Bridge**.
-2. On its **Configuration** tab, set **Audio input** to the interface the
-   source is plugged into (for example the Behringer UCA222). Leave the other
-   options alone unless you need to change them.
-3. Start the add-on and check the log — it should report the stream it is
-   sending.
+1. Settings → Apps → **App store** → ⋮ → **Repositories**
+2. Add `https://github.com/Thrasher2020/vban-bridge`
+3. Install **VBAN Bridge**
+4. On its **Configuration** tab set **Audio input** to your interface — not
+   *Default*, or it may record from something else entirely
+5. Start it. The log should show:
 
-Both add-ons run on the host network, so the default target
-`127.0.0.1:6980` never leaves the machine.
+```
+[vban_bridge] sending stream 'VinylBridge' to 127.0.0.1:6980 (48000 Hz, 2 ch, 16I) from ALSA device 'pulse'
+```
+
+Installing builds the image, which takes a few minutes the first time.
 
 ## Music Assistant setup
 
-1. Settings → Providers → **Add provider** → **VBAN Receiver**.
-2. Configure it to match this add-on:
+VBAN Receiver is a **plugin**, not a player provider — that distinction costs
+most people ten minutes, because the Providers page is dominated by player
+providers and nothing there will ever list it.
 
-   | VBAN Receiver setting | Value |
-   | --- | --- |
-   | UDP port | `6980` |
-   | Stream name | `VinylBridge` |
-   | Sender IP | `127.0.0.1` (or leave open) |
-   | PCM format | `S16LE` |
-   | Sample rate | `48000` |
-   | Channels | `2` |
+**Settings → Plugins → Add a plugin → VBAN Receiver**, then match the add-on:
 
-3. In Music Assistant, open **Live Inputs**, pick the VBAN stream and play it
-   on a player or group.
+| Music Assistant setting | Value |
+| --- | --- |
+| Receiver: UDP Port | `6980` |
+| Sender: VBAN Stream Name | `VinylBridge` |
+| Sender: VBAN Sender hostname/IP address | `127.0.0.1` |
+| PCM audio format | `S16LE` |
+| PCM sample rate | `48000` |
+| Channels | `2` |
 
-If you change `sample_rate`, `channels`, `format`, `ma_port` or `stream_name`
-in the add-on options, change the matching field on the plugin too — the two
-sides must agree.
+Leave the ADVANCED fields alone: `0.0.0.0` bind is what you want, and the
+default queue strategy is fine over loopback.
 
-## Running alongside Vinyl Listener
+Then play it: **Browse** → the VBAN stream → play → choose a player or group.
 
-The add-on can stay running while the **Vinyl Listener** add-on is also
-recording from the same interface. Both are PulseAudio clients, so the single
-input is shared rather than seized by one of them. Vinyl identification is
-unaffected; this add-on simply keeps sending the same audio to Music Assistant.
-
-## Limits
-
-- **Latency** is roughly one to three seconds end to end, depending on the
-  player. Fine for casual listening, not for video sync.
-- **No automatic switching.** The stream runs whenever the add-on is started;
-  it does not know about needle drops. Use the add-on's start/stop, or an
-  automation calling `hassio.addon_start` / `hassio.addon_stop`, if you want it
-  tied to the turntable switch.
-- **One Music Assistant target at a time.** Playback is controlled from Music
-  Assistant once the Live Input is playing; use a speaker group for several
-  rooms.
-- **16-bit, up to 48 kHz.** That is the limit of the UCA222 class of interface,
-  and it is what Music Assistant's Live Input expects.
-- The stream is sent continuously whenever the add-on is running, including
-  silence. On loopback that costs nothing measurable.
+If you change `ma_port`, `stream_name`, `sample_rate`, `channels` or `format`
+in the add-on options, change the same field in the plugin. The two sides must
+agree; a mismatch produces silence with no error on either side.
 
 ## Options
 
 | Option | Default | Notes |
 | --- | --- | --- |
-| `ma_host` | `127.0.0.1` | Music Assistant address |
-| `ma_port` | `6980` | VBAN UDP port |
-| `stream_name` | `VinylBridge` | 1–16 letters or digits |
-| `sample_rate` | `48000` | `44100` or `48000` |
-| `channels` | `2` | `1` or `2` |
-| `format` | `16I` | `16I`, `24I`, `32I`, `32F` |
-| `alsa_device` | `pulse` | ALSA PCM name on the host |
-| `buffer_size` | `1024` | Frames per packet |
-| `log_level` | `3` | 0 fatal … 4 debug |
+| `ma_host` | `127.0.0.1` | Music Assistant address. Only change it if Music Assistant is on another machine. |
+| `ma_port` | `6980` | Must match the plugin's UDP port. |
+| `stream_name` | `VinylBridge` | 1–16 letters or digits. Must match the plugin's stream name exactly. |
+| `sample_rate` | `48000` | `44100` or `48000`. Must match the plugin. |
+| `channels` | `2` | `1` or `2`. Must match the plugin. |
+| `format` | `16I` | `16I`, `24I`, `32I`, `32F` (S16LE, S24LE, S32LE, F32LE). Must match the plugin. |
+| `alsa_device` | `pulse` | ALSA PCM to record from. `pulse` is Home Assistant's selected Audio input. |
+| `buffer_size` | `1024` | Frames per packet, ~21 ms at 48 kHz. Lower is lower latency; too low stutters. |
+| `log_level` | `3` | 0 fatal, 1 error, 2 warning, 3 info, 4 debug. |
+
+## Latency
+
+Roughly **1–3 seconds** end to end, most of it in the player at the far end
+rather than in the bridge. Fine for listening; not for anything that has to
+line up with a picture.
+
+If you want to trim it, lower `buffer_size`. 1024 frames is about 21 ms at
+48 kHz, and going far below 256 is more likely to stutter than to help.
+
+## What it does not do
+
+**It cannot show what is playing.** Music Assistant's VBAN Receiver fixes the
+now-playing text when the stream starts:
+
+```python
+stream_metadata=StreamMetadata(title=self._vban_stream_name, artist=self._sender_host)
+```
+
+So every Music Assistant player shows the stream name and the sender address
+for as long as the stream runs. There is no API to update it afterwards, and
+the plugin ignores VBAN's text sub-channel. This is a property of the
+receiver, not of this add-on.
+
+If you also run the [Vinyl Listener](https://github.com/Thrasher2020/vinyl_listener)
+add-on, its `media_player.vinyl_listener` entity carries the identified artist
+and title, so a Home Assistant dashboard can show what is on the turntable even
+though the Music Assistant player cannot.
+
+Also not implemented:
+
+- **No needle-drop detection.** The stream runs whenever the add-on runs.
+- **One receiver per port**, one stream name per receiver.
+- **No control of Music Assistant playback.** Starting the add-on does not
+  start anything playing; that stays a manual choice of player or group.
+
+## Automating it
+
+What you can automate is whether capture is running — useful if you want the
+log quiet when the turntable is off:
+
+```yaml
+automation:
+  - alias: Start VBAN Bridge with the turntable
+    triggers:
+      - trigger: state
+        entity_id: switch.turntable
+        to: "on"
+    actions:
+      - action: hassio.addon_start
+        data:
+          addon: a4eae6cf_vban_bridge
+```
+
+`hassio.app_start` is the same service under the newer "apps" naming. Take your
+own add-on's slug from its page URL rather than copying the value above.
+
+## Running alongside other capture add-ons
+
+Several PulseAudio clients can record the same input at once, so this add-on
+does not fight with a Shazam-style identifier or anything else that records the
+interface. Both read it concurrently; neither seizes it.
+
+## Troubleshooting
+
+| Symptom | Likely cause |
+| --- | --- |
+| `vban_emitter is not installed` in the log | Image problem, not configuration. Reinstall. |
+| Log repeats `cannot set sample rate`, `open error`, `set parameters` | Audio input not set, or the interface will not run at the configured rate. |
+| Log clean, Music Assistant receives nothing | The six settings above do not match. |
+| Music Assistant says it is playing, but silence | The target player or group, not the bridge. Test that player with a normal track. |
+| Dropouts or crackle | Raise `buffer_size`. Check nothing else is holding the interface at a different rate. |
+
+`vban_emitter` exits on a hard capture error and `run.sh` restarts it after five
+seconds, so a permanently repeating error in the log is your signal — a working
+stream logs once and then stays quiet.
+
+## Tested with
+
+- Home Assistant OS 18.3 / Home Assistant 2026.11.1, `amd64`
+- Music Assistant add-on 2.10.9
+- Behringer UCA222 (TI PCM2902), 48 kHz, 16-bit, stereo
+- Alongside Vinyl Listener 1.5.1 recording the same interface
+
+The PCM2902 is 16-bit and tops out at 48 kHz, so `24I` and `32I` in the options
+exist for other interfaces, not this one.
+
+## If you don't want an add-on
+
+`vban_emitter` needs no Home Assistant. Build
+[quiniouben/vban](https://github.com/quiniouben/vban) yourself, run it against
+any ALSA or PulseAudio capture device, and point Music Assistant's VBAN
+Receiver at that host. On PipeWire, `libpipewire-module-vban-send` does the same
+job with no extra software at all.
+
+## Credits
+
+- [`quiniouben/vban`](https://github.com/quiniouben/vban) — `vban_emitter`,
+  GPL-3.0, built from source when the image is built.
+- [VBAN](https://vb-audio.com/Voicemeeter/vban.htm) — the protocol, by VB-Audio.
+- [Music Assistant](https://www.music-assistant.io) and its VBAN Receiver
+  plugin, contributed by sprocket-9.
+
+## Issues
+
+Open an issue with your Home Assistant version, your Music Assistant version,
+the add-on log, and the exact **Audio input** name shown in the configuration.
+Questions about track information are answered above: the receiver cannot show
+it.
