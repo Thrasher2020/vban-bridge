@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.1
+
+- `gate_entity` and `stop_player` are now validated when you save the options.
+  A wrong domain or a typo is rejected up front instead of silently keeping
+  capture off. Empty is still allowed.
+
 ## 0.2.0
 
 - New **gate** options so capture only runs when the source is in use:

@@ -1,5 +1,5 @@
 name: "VBAN Bridge"
-version: "0.2.0"
+version: "0.2.1"
 slug: "vban_bridge"
 description: >-
   Streams an audio input on the Home Assistant host (for example a turntable
@@ -47,7 +47,7 @@ schema:
   buffer_size: int(128,8192)
   log_level: int(0,4)
   gate_mode: list(always|switch|power)
-  gate_entity: str?
+  gate_entity: match(^((switch|input_boolean|sensor|binary_sensor)\.[a-z0-9_]+)?$)
   power_threshold_w: float(0,10000)
   off_delay_s: int(0,3600)
-  stop_player: str?
+  stop_player: match(^(media_player\.[a-z0-9_]+)?$)
