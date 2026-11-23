@@ -1,5 +1,5 @@
 name: "VBAN Bridge"
-version: "0.1.1"
+version: "0.2.0"
 slug: "vban_bridge"
 description: >-
   Streams an audio input on the Home Assistant host (for example a turntable
@@ -18,6 +18,9 @@ audio: true
 # The Music Assistant add-on also runs on the host network, so the stream can
 # go to 127.0.0.1 and never touch the LAN.
 host_network: true
+# Needed to read the gate entity and, optionally, stop a Music Assistant
+# player when the gate closes. Uses the Supervisor token; no long-lived token.
+homeassistant_api: true
 options:
   ma_host: "127.0.0.1"
   ma_port: 6980
@@ -28,6 +31,11 @@ options:
   alsa_device: "pulse"
   buffer_size: 1024
   log_level: 3
+  gate_mode: "always"
+  gate_entity: ""
+  power_threshold_w: 1.0
+  off_delay_s: 300
+  stop_player: ""
 schema:
   ma_host: str
   ma_port: port
@@ -38,3 +46,8 @@ schema:
   alsa_device: str
   buffer_size: int(128,8192)
   log_level: int(0,4)
+  gate_mode: list(always|switch|power)
+  gate_entity: str?
+  power_threshold_w: float(0,10000)
+  off_delay_s: int(0,3600)
+  stop_player: str?

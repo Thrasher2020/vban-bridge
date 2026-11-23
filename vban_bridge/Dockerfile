@@ -46,6 +46,7 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         bash \
         ca-certificates \
+        curl \
         jq \
         libasound2 \
         libasound2-plugins \

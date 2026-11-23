@@ -45,3 +45,32 @@ configuration:
     name: Log level
     description: >-
       0 fatal, 1 error, 2 warning, 3 info, 4 debug.
+  gate_mode:
+    name: Gate mode
+    description: >-
+      When to capture. "always" streams whenever the add-on runs. "switch"
+      streams while the gate entity is on. "power" streams while the gate
+      entity's watts are at or above the threshold below.
+  gate_entity:
+    name: Gate entity
+    description: >-
+      The entity that opens the gate, for example switch.turntable (switch
+      mode) or a power sensor such as sensor.turntable_power (power mode).
+      Leave empty in "always" mode.
+  power_threshold_w:
+    name: Power threshold (W)
+    description: >-
+      Power mode only. Capture starts when the gate entity reads at or above
+      this many watts. Measure your deck playing and idle before you set it;
+      the default of 1 W suits a turntable that draws about 1 W while spinning.
+  off_delay_s:
+    name: Off delay (seconds)
+    description: >-
+      How long the gate must stay closed before capture stops. A short dropout
+      shorter than this does not interrupt the stream. 300 is five minutes.
+  stop_player:
+    name: Music Assistant player to stop (optional)
+    description: >-
+      Optional media_player entity, for example media_player.office_sonos. When
+      capture stops because the gate closed, this player is sent a stop. Leave
+      empty to stop playback yourself.

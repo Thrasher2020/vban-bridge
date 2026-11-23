@@ -68,6 +68,9 @@ Details worth knowing:
 - A USB audio interface ALSA can see. Class-compliant interfaces work; the
   PCM2902-based UCA series is what this was developed against.
 - Architectures: `amd64`, `aarch64`.
+- For the `switch` or `power` gate, a switch or power sensor for the source
+  (for example a smart plug). The add-on reads it through the Home Assistant
+  API, which it is granted automatically.
 
 ## Installation
 
@@ -123,6 +126,11 @@ agree; a mismatch produces silence with no error on either side.
 | `alsa_device` | `pulse` | ALSA PCM to record from. `pulse` is Home Assistant's selected Audio input. |
 | `buffer_size` | `1024` | Frames per packet, ~21 ms at 48 kHz. Lower is lower latency; too low stutters. |
 | `log_level` | `3` | 0 fatal, 1 error, 2 warning, 3 info, 4 debug. |
+| `gate_mode` | `always` | `always`, `switch` or `power`. See *Only capture when the turntable is in use*. |
+| `gate_entity` | empty | Switch or power sensor that opens the gate. Required unless `gate_mode` is `always`. |
+| `power_threshold_w` | `1.0` | Power mode: capture starts at or above this many watts. |
+| `off_delay_s` | `300` | Seconds the gate must stay closed before capture stops. |
+| `stop_player` | empty | Optional `media_player` to stop when capture stops because the gate closed. |
 
 ## Latency
 
@@ -154,31 +162,37 @@ though the Music Assistant player cannot.
 
 Also not implemented:
 
-- **No needle-drop detection.** The stream runs whenever the add-on runs.
+- **Needle-drop detection is not built in.** Use the power or switch gate
+  below to open capture when the deck is in use.
 - **One receiver per port**, one stream name per receiver.
-- **No control of Music Assistant playback.** Starting the add-on does not
-  start anything playing; that stays a manual choice of player or group.
+- **Music Assistant playback is not started by this add-on.** Starting capture
+  does not start anything playing; that stays a manual choice of player or
+  group. Stopping can be automatic (see `stop_player` below).
 
-## Automating it
+## Only capture when the turntable is in use
 
-What you can automate is whether capture is running — useful if you want the
-log quiet when the turntable is off:
+The **gate** options decide when the add-on captures. With the default
+`always`, it streams whenever the add-on runs, as before.
 
-```yaml
-automation:
-  - alias: Start VBAN Bridge with the turntable
-    triggers:
-      - trigger: state
-        entity_id: switch.turntable
-        to: "on"
-    actions:
-      - action: hassio.addon_start
-        data:
-          addon: a4eae6cf_vban_bridge
-```
+- **`switch`**: capture while `gate_entity` is `on`, e.g. `switch.turntable`.
+  Works with the switch you already have.
+- **`power`**: capture while `gate_entity` reads at or above `power_threshold_w`,
+  e.g. a smart plug's power sensor on the deck. A spinning turntable draws about
+  1 W, so the default threshold is 1 W. Measure your own deck playing and idle
+  first.
 
-`hassio.app_start` is the same service under the newer "apps" naming. Take your
-own add-on's slug from its page URL rather than copying the value above.
+Capture stops only after the gate has stayed closed for `off_delay_s` (default
+300 s). A short dropout does not interrupt the stream.
+
+Optionally set `stop_player` to a Music Assistant player, for example
+`media_player.office_sonos`. When capture stops because the gate closed, that
+player is sent a stop. Leave it empty if you prefer to stop playback yourself.
+
+If the gate entity is unavailable or missing, capture stays off and the log says
+so.
+
+This idea came from Salapenos on the Home Assistant community forum, who used a
+smart plug on the turntable to start and stop the bridge.
 
 ## Running alongside other capture add-ons
 
